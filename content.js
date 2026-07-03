@@ -6,6 +6,7 @@
     lastWord: "",
     lastRequestedWord: "",
     requestToken: 0,
+    activeElement: null,
     observer: null,
     rafId: null,
     positionRafId: null
@@ -24,7 +25,6 @@
     root.id = overlayId;
     root.innerHTML = `
       <div class="amt-window" role="status" aria-live="polite">
-        <div class="amt-title">Arabic translation</div>
         <div class="amt-translation" data-role="translation">Type on Monkeytype to see the Arabic translation here.</div>
       </div>
     `;
@@ -43,12 +43,14 @@
         const activeWord = getActiveWord();
         const word = activeWord?.word || "";
 
+        state.activeElement = activeWord?.element || null;
+
         if (word !== state.lastWord) {
           state.lastWord = word;
           updateWord(word);
         }
 
-        schedulePositionUpdate(activeWord?.element || null);
+        schedulePositionUpdate(state.activeElement);
       });
     };
 
@@ -146,6 +148,7 @@
 
     if (!word) {
       translationEl.textContent = "Type on Monkeytype to see the Arabic translation here.";
+      schedulePositionUpdate(state.activeElement);
       return;
     }
 
@@ -157,6 +160,7 @@
     const token = ++state.requestToken;
 
     translationEl.textContent = "Translating…";
+    schedulePositionUpdate(state.activeElement);
 
     const response = await chrome.runtime.sendMessage({
       type: "TRANSLATE_WORD",
@@ -169,9 +173,11 @@
 
     if (!response?.ok) {
       translationEl.textContent = response?.error ? `Translation unavailable: ${response.error}` : "Translation unavailable.";
+      schedulePositionUpdate(state.activeElement);
       return;
     }
 
     translationEl.textContent = response.translation || "No translation found.";
+    schedulePositionUpdate(state.activeElement);
   }
 })();
