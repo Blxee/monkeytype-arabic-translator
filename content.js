@@ -10,7 +10,8 @@
     prefetchedWords: new Set(),
     observer: null,
     rafId: null,
-    positionRafId: null
+    positionRafId: null,
+    loadingTimerId: null
   };
 
   if (window.top !== window) {
@@ -113,7 +114,7 @@
   }
 
   function prefetchUpcomingWords(activeElement, currentWord) {
-    const nextWords = getUpcomingWords(activeElement, 4);
+    const nextWords = getUpcomingWords(activeElement, 10);
     const wordsToPrefetch = [];
 
     for (const word of nextWords) {
@@ -197,6 +198,11 @@
   async function updateWord(word) {
     const translationEl = overlay.querySelector('[data-role="translation"]');
 
+    if (state.loadingTimerId) {
+      clearTimeout(state.loadingTimerId);
+      state.loadingTimerId = null;
+    }
+
     if (!word) {
       translationEl.textContent = "Type on Monkeytype to see the Arabic translation here.";
       schedulePositionUpdate(state.activeElement);
@@ -210,13 +216,24 @@
     state.lastRequestedWord = word;
     const token = ++state.requestToken;
 
-    translationEl.textContent = "Translating…";
-    schedulePositionUpdate(state.activeElement);
+    state.loadingTimerId = window.setTimeout(() => {
+      if (token !== state.requestToken) {
+        return;
+      }
+
+      translationEl.textContent = "Translating…";
+      schedulePositionUpdate(state.activeElement);
+    }, 140);
 
     const response = await chrome.runtime.sendMessage({
       type: "TRANSLATE_WORD",
       word
     });
+
+    if (state.loadingTimerId) {
+      clearTimeout(state.loadingTimerId);
+      state.loadingTimerId = null;
+    }
 
     if (token !== state.requestToken) {
       return;
