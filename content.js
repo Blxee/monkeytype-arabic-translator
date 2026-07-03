@@ -7,6 +7,7 @@
     lastRequestedWord: "",
     requestToken: 0,
     activeElement: null,
+    prefetchedWords: new Set(),
     observer: null,
     rafId: null,
     positionRafId: null
@@ -51,6 +52,7 @@
         }
 
         schedulePositionUpdate(state.activeElement);
+        prefetchUpcomingWords(state.activeElement, word);
       });
     };
 
@@ -108,6 +110,55 @@
     return String(text || "")
       .replace(/[^A-Za-z'-]/g, "")
       .trim();
+  }
+
+  function prefetchUpcomingWords(activeElement, currentWord) {
+    const nextWords = getUpcomingWords(activeElement, 4);
+    const wordsToPrefetch = [];
+
+    for (const word of nextWords) {
+      if (!word || word === currentWord || state.prefetchedWords.has(word)) {
+        continue;
+      }
+
+      state.prefetchedWords.add(word);
+      wordsToPrefetch.push(word);
+    }
+
+    if (!wordsToPrefetch.length) {
+      return;
+    }
+
+    chrome.runtime.sendMessage({
+      type: "PREFETCH_WORDS",
+      words: wordsToPrefetch
+    }).catch(() => {});
+  }
+
+  function getUpcomingWords(activeElement, limit) {
+    const currentWordElement = activeElement?.closest?.(".word") || activeElement;
+    const parent = currentWordElement?.parentElement;
+
+    if (!currentWordElement || !parent) {
+      return [];
+    }
+
+    const children = Array.from(parent.children);
+    const currentIndex = children.indexOf(currentWordElement);
+    if (currentIndex < 0) {
+      return [];
+    }
+
+    const results = [];
+    for (let index = currentIndex + 1; index < children.length && results.length < limit; index += 1) {
+      const candidate = children[index];
+      const word = cleanWord(candidate.textContent);
+      if (word) {
+        results.push(word);
+      }
+    }
+
+    return results;
   }
 
   function schedulePositionUpdate(activeElement) {

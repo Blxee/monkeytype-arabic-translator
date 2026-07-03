@@ -29,7 +29,8 @@
   color: #ffffff;
   word-break: break-word;
   direction: rtl;
-  text-align: right;
+  text-align: center;
+  unicode-bidi: plaintext;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   line-clamp: 2;
