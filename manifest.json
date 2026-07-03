@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Monkeytype Arabic Translator",
+  "version": "1.0.0",
+  "description": "Shows an Arabic translation for the active English word on Monkeytype in a draggable overlay.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://monkeytype.com/*",
+    "https://api.mymemory.translated.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://monkeytype.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
