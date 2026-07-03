@@ -1,77 +1,46 @@
 #arabic-translation-overlay {
   position: fixed;
-  inset: auto 16px 16px auto;
+  left: 50%;
+  top: 16px;
   z-index: 2147483647;
   pointer-events: none;
 }
 
 #arabic-translation-overlay .amt-window {
-  width: min(320px, calc(100vw - 32px));
+  width: min(240px, calc(100vw - 24px));
   pointer-events: auto;
   background: rgba(16, 20, 29, 0.92);
   color: #f3f5f8;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(14px);
   overflow: hidden;
   user-select: none;
 }
 
-#arabic-translation-overlay .amt-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  cursor: grab;
-  background: linear-gradient(135deg, rgba(36, 93, 81, 0.95), rgba(25, 33, 47, 0.95));
-}
-
-#arabic-translation-overlay .amt-dragging .amt-header {
-  cursor: grabbing;
-}
-
 #arabic-translation-overlay .amt-title {
-  font-size: 12px;
+  padding: 10px 12px 0;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-#arabic-translation-overlay .amt-reset {
-  border: 0;
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.14);
-  color: inherit;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-#arabic-translation-overlay .amt-body {
-  padding: 14px 12px 16px;
-  display: grid;
-  gap: 10px;
-}
-
-#arabic-translation-overlay .amt-word {
-  font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
-  word-break: break-word;
+  color: rgba(243, 245, 248, 0.7);
 }
 
 #arabic-translation-overlay .amt-translation {
-  font-size: 15px;
-  line-height: 1.5;
-  color: rgba(243, 245, 248, 0.88);
+  padding: 6px 12px 12px;
+  font-size: 21px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #ffffff;
   word-break: break-word;
   direction: rtl;
   text-align: right;
 }
 
-#arabic-translation-overlay .amt-window.amt-dragging {
-  cursor: grabbing;
+#arabic-translation-overlay .amt-translation:empty::before {
+  content: "";
+  display: block;
+  min-height: 1.35em;
 }

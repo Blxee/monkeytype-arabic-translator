@@ -1,13 +1,14 @@
 (function () {
   const overlayId = "arabic-translation-overlay";
-  const storageKey = "monkeytypeArabicTranslatorOverlay";
+  const positionGap = 12;
+  const viewportMargin = 8;
   const state = {
     lastWord: "",
     lastRequestedWord: "",
     requestToken: 0,
-    drag: null,
     observer: null,
-    rafId: null
+    rafId: null,
+    positionRafId: null
   };
 
   if (window.top !== window) {
@@ -16,8 +17,6 @@
 
   const overlay = createOverlay();
   document.documentElement.appendChild(overlay);
-  restorePosition(overlay);
-  attachDragging(overlay);
   startWatching();
 
   function createOverlay() {
@@ -25,100 +24,12 @@
     root.id = overlayId;
     root.innerHTML = `
       <div class="amt-window" role="status" aria-live="polite">
-        <div class="amt-header">
-          <div class="amt-title">Arabic translation</div>
-          <button class="amt-reset" type="button" aria-label="Reset position">Reset</button>
-        </div>
-        <div class="amt-body">
-          <div class="amt-word" data-role="word">Waiting for a word…</div>
-          <div class="amt-translation" data-role="translation">Type on Monkeytype to see the Arabic translation here.</div>
-        </div>
+        <div class="amt-title">Arabic translation</div>
+        <div class="amt-translation" data-role="translation">Type on Monkeytype to see the Arabic translation here.</div>
       </div>
     `;
 
-    const resetButton = root.querySelector(".amt-reset");
-    resetButton.addEventListener("click", async () => {
-      root.classList.remove("amt-has-position");
-      root.style.left = "auto";
-      root.style.top = "auto";
-      root.style.right = "16px";
-      root.style.bottom = "16px";
-      await chrome.storage.local.remove(storageKey);
-    });
-
     return root;
-  }
-
-  function attachDragging(root) {
-    const windowEl = root.querySelector(".amt-window");
-    const header = root.querySelector(".amt-header");
-
-    header.addEventListener("pointerdown", (event) => {
-      if (event.target.closest("button")) {
-        return;
-      }
-
-      const rect = windowEl.getBoundingClientRect();
-      state.drag = {
-        pointerId: event.pointerId,
-        offsetX: event.clientX - rect.left,
-        offsetY: event.clientY - rect.top
-      };
-
-      header.setPointerCapture(event.pointerId);
-      windowEl.classList.add("amt-dragging");
-      event.preventDefault();
-    });
-
-    windowEl.addEventListener("pointermove", (event) => {
-      if (!state.drag || state.drag.pointerId !== event.pointerId) {
-        return;
-      }
-
-      const nextLeft = Math.max(8, Math.min(window.innerWidth - windowEl.offsetWidth - 8, event.clientX - state.drag.offsetX));
-      const nextTop = Math.max(8, Math.min(window.innerHeight - windowEl.offsetHeight - 8, event.clientY - state.drag.offsetY));
-
-      root.classList.add("amt-has-position");
-      root.style.left = `${nextLeft}px`;
-      root.style.top = `${nextTop}px`;
-      root.style.right = "auto";
-      root.style.bottom = "auto";
-    });
-
-    const endDrag = async (event) => {
-      if (!state.drag || state.drag.pointerId !== event.pointerId) {
-        return;
-      }
-
-      windowEl.classList.remove("amt-dragging");
-      if (header.hasPointerCapture(event.pointerId)) {
-        header.releasePointerCapture(event.pointerId);
-      }
-      state.drag = null;
-
-      await chrome.storage.local.set({
-        [storageKey]: {
-          left: root.style.left,
-          top: root.style.top
-        }
-      });
-    };
-
-    windowEl.addEventListener("pointerup", endDrag);
-    windowEl.addEventListener("pointercancel", endDrag);
-  }
-
-  async function restorePosition(root) {
-    const stored = await chrome.storage.local.get(storageKey);
-    const position = stored?.[storageKey];
-
-    if (position?.left && position?.top) {
-      root.classList.add("amt-has-position");
-      root.style.left = position.left;
-      root.style.top = position.top;
-      root.style.right = "auto";
-      root.style.bottom = "auto";
-    }
   }
 
   function startWatching() {
@@ -129,11 +40,15 @@
 
       state.rafId = requestAnimationFrame(() => {
         state.rafId = null;
-        const word = getActiveWord();
-        if (word && word !== state.lastWord) {
+        const activeWord = getActiveWord();
+        const word = activeWord?.word || "";
+
+        if (word !== state.lastWord) {
           state.lastWord = word;
           updateWord(word);
         }
+
+        schedulePositionUpdate(activeWord?.element || null);
       });
     };
 
@@ -154,6 +69,8 @@
 
     window.addEventListener("keyup", scheduleUpdate, true);
     window.addEventListener("click", scheduleUpdate, true);
+    window.addEventListener("scroll", scheduleUpdate, true);
+    window.addEventListener("resize", scheduleUpdate);
   }
 
   function getActiveWord() {
@@ -172,16 +89,17 @@
 
       const text = cleanWord(element.textContent);
       if (text) {
-        return text;
+        return { word: text, element };
       }
     }
 
     const activeLine = document.querySelector(".word.active") || document.querySelector(".word.current");
     if (activeLine) {
-      return cleanWord(activeLine.textContent);
+      const word = cleanWord(activeLine.textContent);
+      return word ? { word, element: activeLine } : null;
     }
 
-    return "";
+    return null;
   }
 
   function cleanWord(text) {
@@ -190,12 +108,43 @@
       .trim();
   }
 
+  function schedulePositionUpdate(activeElement) {
+    if (state.positionRafId) {
+      return;
+    }
+
+    state.positionRafId = requestAnimationFrame(() => {
+      state.positionRafId = null;
+      positionOverlay(activeElement);
+    });
+  }
+
+  function positionOverlay(activeElement) {
+    const windowEl = overlay.querySelector(".amt-window");
+
+    if (!windowEl || !activeElement || !document.contains(activeElement)) {
+      overlay.style.left = "16px";
+      overlay.style.top = "16px";
+      overlay.style.transform = "none";
+      return;
+    }
+
+    const wordRect = activeElement.getBoundingClientRect();
+    const overlayRect = windowEl.getBoundingClientRect();
+    const centerX = wordRect.left + wordRect.width / 2;
+    const topY = wordRect.top - positionGap - overlayRect.height;
+    const clampedX = Math.max(viewportMargin + overlayRect.width / 2, Math.min(window.innerWidth - viewportMargin - overlayRect.width / 2, centerX));
+    const clampedY = Math.max(viewportMargin, topY);
+
+    overlay.style.left = `${clampedX}px`;
+    overlay.style.top = `${clampedY}px`;
+    overlay.style.transform = "translateX(-50%)";
+  }
+
   async function updateWord(word) {
-    const wordEl = overlay.querySelector('[data-role="word"]');
     const translationEl = overlay.querySelector('[data-role="translation"]');
 
     if (!word) {
-      wordEl.textContent = "Waiting for a word…";
       translationEl.textContent = "Type on Monkeytype to see the Arabic translation here.";
       return;
     }
@@ -207,7 +156,6 @@
     state.lastRequestedWord = word;
     const token = ++state.requestToken;
 
-    wordEl.textContent = word;
     translationEl.textContent = "Translating…";
 
     const response = await chrome.runtime.sendMessage({

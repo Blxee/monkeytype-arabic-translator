@@ -2,8 +2,7 @@
   "manifest_version": 3,
   "name": "Monkeytype Arabic Translator",
   "version": "1.0.0",
-  "description": "Shows an Arabic translation for the active English word on Monkeytype in a draggable overlay.",
-  "permissions": ["storage"],
+  "description": "Shows an Arabic translation for the active Monkeytype word in a compact overlay above it.",
   "host_permissions": [
     "https://monkeytype.com/*",
     "https://api.mymemory.translated.net/*"

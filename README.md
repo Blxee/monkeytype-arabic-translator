@@ -1,6 +1,6 @@
 # monkeytype-arabic-translator
 
-Brave/Chrome extension that shows an Arabic translation for the active English word on Monkeytype in a small draggable overlay.
+Brave/Chrome extension that shows an Arabic translation for the active Monkeytype word in a compact overlay above it.
 
 ## Install
 
@@ -13,8 +13,8 @@ Brave/Chrome extension that shows an Arabic translation for the active English w
 
 - Watches the active Monkeytype word.
 - Fetches an Arabic translation from MyMemory.
-- Displays the result in a movable overlay.
-- Remembers the overlay position.
+- Displays only the Arabic translation in a compact overlay.
+- Keeps the overlay positioned above the active word.
 
 ## Notes
 
